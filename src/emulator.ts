@@ -1,7 +1,7 @@
 import { execFile, spawn as nodeSpawn, type ChildProcess } from 'node:child_process';
 import { closeSync, existsSync, mkdirSync, openSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, win32 } from 'node:path';
 import { AVD_RE, emulatorPort } from './config.js';
 import type { EmulatorsConfig } from './types.js';
 
@@ -22,6 +22,7 @@ export function findEmulator(opts: FindEmulatorOptions = {}): FindEmulatorResult
   const exists = opts.exists ?? existsSync;
   const home = opts.home ?? homedir();
   const platform = opts.platform ?? process.platform;
+  const pJoin = platform === 'win32' ? win32.join : join;
   const bin = platform === 'win32' ? 'emulator.exe' : 'emulator';
 
   for (const [name, source] of [
@@ -43,13 +44,13 @@ export function findEmulator(opts: FindEmulatorOptions = {}): FindEmulatorResult
 
   const localAppData = env.LOCALAPPDATA;
   const winSdk = localAppData
-    ? join(localAppData, 'Android', 'Sdk', 'emulator', bin)
-    : join(home, 'AppData', 'Local', 'Android', 'Sdk', 'emulator', bin);
+    ? pJoin(localAppData, 'Android', 'Sdk', 'emulator', bin)
+    : pJoin(home, 'AppData', 'Local', 'Android', 'Sdk', 'emulator', bin);
   if (platform === 'win32' && exists(winSdk)) return { path: winSdk, source: 'windows_sdk' };
 
   const sep = platform === 'win32' ? ';' : ':';
   for (const dir of (env.PATH ?? '').split(sep).filter(Boolean)) {
-    const candidate = join(dir, bin);
+    const candidate = pJoin(dir, bin);
     if (exists(candidate)) return { path: candidate, source: 'path' };
   }
   return null;

@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, win32 } from 'node:path';
 
 export interface FindAdbResult {
   path: string;
@@ -20,6 +20,7 @@ export function findAdb(opts: FindAdbOptions = {}): FindAdbResult | null {
   const exists = opts.exists ?? existsSync;
   const home = opts.home ?? homedir();
   const platform = opts.platform ?? process.platform;
+  const pJoin = platform === 'win32' ? win32.join : join;
   const bin = platform === 'win32' ? 'adb.exe' : 'adb';
 
   // 1. Giá trị người dùng nhập
@@ -55,8 +56,8 @@ export function findAdb(opts: FindAdbOptions = {}): FindAdbResult | null {
   // 6. Windows: %LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe
   const localAppData = env.LOCALAPPDATA;
   const winSdk = localAppData
-    ? join(localAppData, 'Android', 'Sdk', 'platform-tools', bin)
-    : join(home, 'AppData', 'Local', 'Android', 'Sdk', 'platform-tools', bin);
+    ? pJoin(localAppData, 'Android', 'Sdk', 'platform-tools', bin)
+    : pJoin(home, 'AppData', 'Local', 'Android', 'Sdk', 'platform-tools', bin);
   if (platform === 'win32' && exists(winSdk)) return { path: winSdk, source: 'windows_sdk' };
 
   // 6. /opt/homebrew/bin/adb
@@ -71,7 +72,7 @@ export function findAdb(opts: FindAdbOptions = {}): FindAdbResult | null {
   const sep = platform === 'win32' ? ';' : ':';
   const pathDirs = (env.PATH ?? '').split(sep).filter(Boolean);
   for (const dir of pathDirs) {
-    const candidate = join(dir, bin);
+    const candidate = pJoin(dir, bin);
     if (exists(candidate)) {
       return { path: 'adb', source: 'path' };
     }
