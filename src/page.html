@@ -62,6 +62,9 @@
   .btn-danger:hover:not(:disabled) { background: #f85149; }
   .btn-sm { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: transparent; border: 1px solid var(--line); color: var(--mut); cursor: pointer; }
   .btn-sm:hover { color: var(--fg); border-color: var(--fg); }
+  .input-mini { width: 44px; padding: 2px 4px !important; font-size: 11px !important; height: 22px; text-align: center; }
+  .dev-count-label { margin-left: 6px; font-size: 11px; color: var(--mut); }
+  .dev-badge { font-size: 11px; color: var(--acc); margin-left: 4px; font-family: ui-monospace, Menlo, Consolas, monospace; }
   .actions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
   details.advanced { font-size: 12px; color: var(--mut); margin-top: 4px; }
   details.advanced summary { cursor: pointer; user-select: none; }
@@ -124,7 +127,12 @@
   <form id="ctrl-form" onsubmit="return false;">
     <div class="row">
       <div class="field">
-        <label>Thiết bị: <button id="btn-refresh" type="button" class="btn-sm">Dò lại</button></label>
+        <label>
+          Thiết bị: <button id="btn-refresh" type="button" class="btn-sm">Dò lại</button>
+          <span class="dev-count-label">Số máy chọn:</span>
+          <input id="input-dev-count" type="number" min="1" max="16" value="2" class="mono input-mini" title="Số lượng thiết bị tự động chọn khi dò">
+          <span id="dev-selected-badge" class="dev-badge"></span>
+        </label>
         <div id="device-list" class="device-list mono"></div>
       </div>
       <div class="field">
@@ -315,6 +323,8 @@
     var inputBl = document.getElementById('input-blacklist');
     var inputAdb = document.getElementById('input-adb');
     var devList = document.getElementById('device-list');
+    var inputDevCount = document.getElementById('input-dev-count');
+    var devBadge = document.getElementById('dev-selected-badge');
     var pkgList = document.getElementById('pkg-list');
     var errBanner = document.getElementById('error-banner');
     var summaryPanel = document.getElementById('summary-panel');
@@ -484,6 +494,42 @@
       }).catch(function () {});
     }
 
+    function updateSelectedBadge() {
+      if (!devBadge) return;
+      var devs = getSelectedDevices();
+      if (!devs.length) {
+        devBadge.textContent = '(chưa chọn)';
+        devBadge.style.color = 'var(--mut)';
+      } else {
+        devBadge.textContent = '(' + devs.length + ' máy)';
+        devBadge.style.color = 'var(--acc)';
+      }
+    }
+
+    function applyDeviceCountLimit() {
+      if (!inputDevCount || !devList) return;
+      var limit = parseInt(inputDevCount.value, 10);
+      if (isNaN(limit) || limit < 1) return;
+      var count = 0;
+      var boxes = devList.children || [];
+      for (var i = 0; i < boxes.length; i++) {
+        var label = boxes[i];
+        var isOnline = (label.className || '').indexOf('offline') < 0;
+        var cb = label.children && label.children[0];
+        if (cb) {
+          if (isOnline && count < limit) {
+            cb.checked = true;
+            count++;
+          } else {
+            cb.checked = false;
+          }
+        }
+      }
+      updateSelectedBadge();
+      updateStartButton();
+      updatePackages();
+    }
+
     function refreshDevices(preferred) {
       if (!window.simcrawler) return Promise.resolve();
       showError('');
@@ -491,6 +537,8 @@
         if (!devList) return;
         devList.textContent = '';
         var preferredSet = preferred && preferred.length ? new Set(preferred) : null;
+        var limit = inputDevCount ? (parseInt(inputDevCount.value, 10) || 2) : 2;
+        var checkedOnlineCount = 0;
         (devices || []).forEach(function (dev) {
           if (/^emulator-\d+$/.test(dev.serial) && knownEmulators.indexOf(dev.serial) < 0) knownEmulators.push(dev.serial);
           var label = h('label', 'device-item' + (dev.state !== 'device' ? ' offline' : ''));
@@ -500,9 +548,19 @@
           if (preferredSet) {
             cb.checked = preferredSet.has(dev.serial);
           } else {
-            cb.checked = dev.state === 'device';
+            if (dev.state === 'device' && checkedOnlineCount < limit) {
+              cb.checked = true;
+              checkedOnlineCount++;
+            } else {
+              cb.checked = false;
+            }
           }
           cb.onchange = function () {
+            var selected = getSelectedDevices();
+            if (inputDevCount && selected.length > 0) {
+              inputDevCount.value = selected.length;
+            }
+            updateSelectedBadge();
             updateStartButton();
             updatePackages();
           };
@@ -511,6 +569,7 @@
           label.appendChild(document.createTextNode(txt));
           devList.appendChild(label);
         });
+        updateSelectedBadge();
         renderAvdList();
         updateStartButton();
         updatePackages();
@@ -567,6 +626,7 @@
         window.simcrawler.start({
           package: pkg,
           devices: devs,
+          deviceCount: inputDevCount ? parseInt(inputDevCount.value, 10) : devs.length,
           maxMinutes: mins,
           blacklist: bl,
           adbPath: adb || undefined,
@@ -612,6 +672,11 @@
       };
     }
 
+    if (inputDevCount) {
+      inputDevCount.oninput = applyDeviceCountLimit;
+      inputDevCount.onchange = applyDeviceCountLimit;
+    }
+
     if (window.simcrawler.onStatus) {
       window.simcrawler.onStatus(function (msg) {
         var c = document.getElementById('conn');
@@ -629,6 +694,13 @@
       var st = (init && init.settings) || {};
       if (st.package && inputPkg) inputPkg.value = st.package;
       if (st.maxMinutes && inputMin) inputMin.value = st.maxMinutes;
+      if (inputDevCount) {
+        if (typeof st.deviceCount === 'number' && st.deviceCount > 0) {
+          inputDevCount.value = st.deviceCount;
+        } else if (st.devices && st.devices.length) {
+          inputDevCount.value = st.devices.length;
+        }
+      }
       if (st.blacklist && inputBl) {
         inputBl.value = Array.isArray(st.blacklist) ? st.blacklist.join(', ') : String(st.blacklist);
       }

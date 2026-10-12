@@ -362,3 +362,72 @@ test('page.html: chế độ app với window.simcrawler, controls, start, blob 
   assert.match(byId['summary-panel'].textContent, /hết thứ để thử/);
   assert.match(byId['summary-panel'].textContent, /còn 3 phần tử chưa thử/);
 });
+
+test('page.html: giới hạn số lượng thiết bị được chọn khi fetch devices và cập nhật qua ô nhập', async () => {
+  const html = readFileSync(new URL('../src/page.html', import.meta.url), 'utf8');
+  const script = /<script>([\s\S]*)<\/script>/.exec(html)![1];
+
+  const byId: Record<string, El> = {};
+  const get = (id: string) => byId[id] || (byId[id] = new El(id));
+  let startedConfig: any = null;
+
+  const simcrawler = {
+    getInitial: async () => ({
+      settings: { package: 'com.test.app', deviceCount: 2 },
+    }),
+    listDevices: async () => [
+      { serial: 'dev-1', state: 'device' },
+      { serial: 'dev-2', state: 'device' },
+      { serial: 'dev-3', state: 'device' },
+      { serial: 'dev-4', state: 'offline' },
+    ],
+    listPackages: async () => ['com.test.app'],
+    start: async (cfg: any) => {
+      startedConfig = cfg;
+      return { ok: true };
+    },
+    stop: async () => ({ ok: true }),
+    getState: async () => ({ package: '', devices: [] }),
+    getShot: async () => null,
+    openLogs: async () => ({ ok: true }),
+    onStarted: () => () => {},
+    onUpdate: () => () => {},
+    onFinished: () => () => {},
+  };
+
+  const ctx = {
+    window: { simcrawler, Blob: class {}, URL: {} },
+    document: {
+      getElementById: get,
+      createElement: (t: string) => new El(t),
+      createTextNode: (t: string) => Object.assign(new El('#text'), { textContent: t }),
+    },
+    Set,
+  };
+
+  vm.runInNewContext(script, ctx);
+  for (let i = 0; i < 4; i++) await new Promise((r) => setImmediate(r));
+
+  // Ban đầu deviceCount = 2, chỉ dev-1 và dev-2 được tick
+  const devItems = get('device-list').children;
+  assert.equal(devItems.length, 4);
+  assert.equal(devItems[0].children[0].checked, true);
+  assert.equal(devItems[1].children[0].checked, true);
+  assert.equal(devItems[2].children[0].checked, false);
+  assert.equal(devItems[3].children[0].checked, false);
+  assert.equal(get('dev-selected-badge').textContent, '(2 máy)');
+
+  // Đổi số lượng thiết bị thành 1 -> tự động chỉ tick máy đầu tiên
+  get('input-dev-count').value = '1';
+  get('input-dev-count').oninput!();
+  assert.equal(devItems[0].children[0].checked, true);
+  assert.equal(devItems[1].children[0].checked, false);
+  assert.equal(devItems[2].children[0].checked, false);
+  assert.equal(get('dev-selected-badge').textContent, '(1 máy)');
+
+  // Bấm start gửi đúng 1 máy và deviceCount = 1
+  get('btn-start').onclick!();
+  assert.ok(startedConfig);
+  assert.deepEqual([...startedConfig.devices], ['dev-1']);
+  assert.equal(startedConfig.deviceCount, 1);
+});

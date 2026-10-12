@@ -158,9 +158,11 @@ npm run app
 SIMCRAWLER_FAKE=1 npm run app
 ```
 
-Đóng gói file cài đặt Desktop (`.dmg`, `.zip` trên macOS):
+Đóng gói file cài đặt Desktop:
 ```bash
-npm run dist
+npm run dist          # Tự động đóng gói theo hệ điều hành hiện tại
+npm run dist:mac      # Đóng gói (.dmg, .zip) cho macOS
+npm run dist:win      # Đóng gói installer (.exe qua NSIS) và bản Portable cho Windows
 ```
 File đóng gói sẽ nằm trong thư mục `release/`.
 
@@ -168,6 +170,8 @@ File đóng gói sẽ nằm trong thư mục `release/`.
 > ```bash
 > xattr -cr /Applications/SimCrawler.app
 > ```
+
+> **Lưu ý trên Windows:** Bộ cài đặt NSIS (`.exe`) cho phép tùy chọn thư mục cài đặt và tự động tạo shortcut ở Desktop và Start Menu. Đường dẫn Android SDK trên Windows (`%LOCALAPPDATA%\Android\Sdk`) được hệ thống tự động nhận diện.
 
 ---
 
@@ -315,7 +319,7 @@ Các loại sự kiện (`event`):
 Dự án đi kèm bộ unit test và integration test hoàn chỉnh:
 
 ```bash
-# Chạy toàn bộ 37 test cases
+# Chạy toàn bộ 38 test cases
 npm test
 
 # Kiểm tra kiểu dữ liệu với TypeScript

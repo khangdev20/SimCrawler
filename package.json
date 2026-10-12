@@ -7,6 +7,10 @@
   "description": "Tự động khám phá một app Android trên 2 thiết bị/emulator, ghi log JSONL, có dashboard xem trực tiếp.",
   "license": "MIT",
   "author": "khangdev20",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/khangdev20/SimCrawler.git"
+  },
   "scripts": {
     "start": "tsx src/index.ts",
     "demo": "tsx src/index.ts --fake --delay 250 --minutes 3 --keep",
