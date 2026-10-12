@@ -52,6 +52,13 @@ export function findAdb(opts: FindAdbOptions = {}): FindAdbResult | null {
   const linuxSdk = join(home, 'Android', 'Sdk', 'platform-tools', bin);
   if (exists(linuxSdk)) return { path: linuxSdk, source: 'android_sdk' };
 
+  // 6. Windows: %LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe
+  const localAppData = env.LOCALAPPDATA;
+  const winSdk = localAppData
+    ? join(localAppData, 'Android', 'Sdk', 'platform-tools', bin)
+    : join(home, 'AppData', 'Local', 'Android', 'Sdk', 'platform-tools', bin);
+  if (platform === 'win32' && exists(winSdk)) return { path: winSdk, source: 'windows_sdk' };
+
   // 6. /opt/homebrew/bin/adb
   const homebrew = join('/opt', 'homebrew', 'bin', bin);
   if (exists(homebrew)) return { path: homebrew, source: 'homebrew' };

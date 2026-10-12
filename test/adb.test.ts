@@ -68,6 +68,17 @@ test('findAdb: thứ tự ưu tiên với exists được tiêm', () => {
     { path: '/home/test/Android/Sdk/platform-tools/adb', source: 'android_sdk' },
   );
 
+  // 6. Windows: %LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe
+  assert.deepEqual(
+    findAdb({
+      env: { LOCALAPPDATA: 'C:\\Users\\test\\AppData\\Local' },
+      home: 'C:\\Users\\test',
+      platform: 'win32',
+      exists: (p) => p === 'C:\\Users\\test\\AppData\\Local\\Android\\Sdk\\platform-tools\\adb.exe',
+    }),
+    { path: 'C:\\Users\\test\\AppData\\Local\\Android\\Sdk\\platform-tools\\adb.exe', source: 'windows_sdk' },
+  );
+
   // 6. /opt/homebrew/bin/adb
   assert.deepEqual(
     findAdb({

@@ -1,10 +1,18 @@
 # SimCrawler 🚀
 
-[![Node.js](https://img.shields.io/badge/Node.js-20%2B-brightgreen.svg)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5%2B-blue.svg)](https://www.typescriptlang.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)]()
-[![Electron](https://img.shields.io/badge/Desktop-Electron-47848F.svg)](https://www.electronjs.org/)
+<p align="center">
+  <a href="README.md"><b>🇻🇳 Tiếng Việt</b></a> •
+  <a href="README_EN.md">🇺🇸 English</a> •
+  <a href="README_ZH.md">🇨🇳 简体中文</a>
+</p>
+
+<p align="center">
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-20%2B-brightgreen.svg" alt="Node.js"></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5%2B-blue.svg" alt="TypeScript"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg" alt="Platform">
+  <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Desktop-Electron-47848F.svg" alt="Desktop Electron"></a>
+</p>
 
 **SimCrawler** là công cụ tự động khám phá và kiểm thử khỉ (automated exploratory & monkey crawler) dành cho ứng dụng Android trên **nhiều thiết bị / emulator song song**.
 

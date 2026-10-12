@@ -14,7 +14,9 @@
     "typecheck": "tsc --noEmit",
     "app:build": "node scripts/build-app.mjs",
     "app": "npm run app:build && electron .",
-    "dist": "npm run app:build && electron-builder"
+    "dist": "npm run app:build && electron-builder",
+    "dist:win": "npm run app:build && electron-builder --win",
+    "dist:mac": "npm run app:build && electron-builder --mac"
   },
   "build": {
     "appId": "com.simcrawler.app",
@@ -44,6 +46,30 @@
         }
       ],
       "identity": null
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SimCrawler"
     }
   },
   "engines": {

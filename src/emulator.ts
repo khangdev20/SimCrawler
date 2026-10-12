@@ -41,6 +41,12 @@ export function findEmulator(opts: FindEmulatorOptions = {}): FindEmulatorResult
   const linuxSdk = join(home, 'Android', 'Sdk', 'emulator', bin);
   if (exists(linuxSdk)) return { path: linuxSdk, source: 'android_sdk' };
 
+  const localAppData = env.LOCALAPPDATA;
+  const winSdk = localAppData
+    ? join(localAppData, 'Android', 'Sdk', 'emulator', bin)
+    : join(home, 'AppData', 'Local', 'Android', 'Sdk', 'emulator', bin);
+  if (platform === 'win32' && exists(winSdk)) return { path: winSdk, source: 'windows_sdk' };
+
   const sep = platform === 'win32' ? ';' : ':';
   for (const dir of (env.PATH ?? '').split(sep).filter(Boolean)) {
     const candidate = join(dir, bin);
