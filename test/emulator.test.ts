@@ -48,6 +48,15 @@ test('findEmulator: thứ tự ưu tiên với exists được tiêm', () => {
     { path: '/home/t/Android/Sdk/emulator/emulator', source: 'android_sdk' },
   );
   assert.deepEqual(
+    findEmulator({
+      env: { LOCALAPPDATA: 'C:\\Users\\t\\AppData\\Local' },
+      home: 'C:\\Users\\t',
+      platform: 'win32',
+      exists: (p) => p === 'C:\\Users\\t\\AppData\\Local\\Android\\Sdk\\emulator\\emulator.exe',
+    }),
+    { path: 'C:\\Users\\t\\AppData\\Local\\Android\\Sdk\\emulator\\emulator.exe', source: 'windows_sdk' },
+  );
+  assert.deepEqual(
     findEmulator({ env: { PATH: '/usr/bin:/opt/x' }, home: '/h', platform: 'linux', exists: (p) => p === '/opt/x/emulator' }),
     { path: '/opt/x/emulator', source: 'path' },
   );
