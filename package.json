@@ -14,7 +14,7 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "demo": "tsx src/index.ts --fake --delay 250 --minutes 3 --keep",
-    "test": "node --import tsx --test \"test/*.test.ts\"",
+    "test": "node --import tsx --test",
     "typecheck": "tsc --noEmit",
     "app:build": "node scripts/build-app.mjs",
     "app": "npm run app:build && electron .",
