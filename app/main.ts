@@ -14,6 +14,7 @@ import type { Device, RunSummary } from '../src/types.js';
 interface SavedSettings {
   package?: string;
   devices?: string[];
+  deviceCount?: number;
   maxMinutes?: number;
   blacklist?: string[];
   adbPath?: string;
@@ -182,9 +183,12 @@ ipcMain.handle('run:start', async (event, raw: unknown) => {
   const cfg = validateConfig(rawCfg, baseDir);
 
   const userAdbPath = typeof rawObj.adbPath === 'string' && rawObj.adbPath.trim() ? rawObj.adbPath.trim() : undefined;
+  const rawDevCount = Number(rawObj.deviceCount);
+  const deviceCount = Number.isFinite(rawDevCount) && rawDevCount > 0 ? Math.floor(rawDevCount) : cfg.devices.length;
   saveSettings({
     package: cfg.package,
     devices: cfg.devices,
+    deviceCount,
     maxMinutes: cfg.maxMinutes,
     blacklist: cfg.blacklist,
     adbPath: userAdbPath,
