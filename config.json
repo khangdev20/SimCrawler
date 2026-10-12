@@ -1,0 +1,6 @@
+{
+  "package": "com.example.app",
+  "devices": ["emulator-5554", "emulator-5556"],
+  "maxMinutes": 10,
+  "blacklist": ["logout", "log out", "sign out", "delete", "remove", "pay", "purchase", "buy", "checkout", "uninstall", "reset"]
+}

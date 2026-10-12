@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' blob: data:; img-src 'self' blob: data:; connect-src 'self' http: ws:;">
+<link rel="icon" type="image/png" href="icon.png">
+<title>SimCrawler</title>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b22; --line: #2a313c; --fg: #e6edf3; --mut: #8b96a5;
+    --ok: #3fb950; --warn: #d29922; --bad: #f85149; --acc: #58a6ff;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f8fa; --panel: #ffffff; --line: #d0d7de; --fg: #1f2328; --mut: #656d76;
+      --ok: #1a7f37; --warn: #9a6700; --bad: #cf222e; --acc: #0969da;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: baseline; gap: 12px; padding: 12px 16px;
+           border-bottom: 1px solid var(--line); }
+  h1 { font-size: 16px; margin: 0; }
+  .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  #pkg { color: var(--mut); font-size: 12px; }
+  #countdown { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--warn);
+               background: rgba(210, 153, 34, 0.12); border: 1px solid rgba(210, 153, 34, 0.35);
+               padding: 2px 8px; border-radius: 999px; }
+  #countdown:not([style*="display: none"]) + #conn { margin-left: 0; }
+  #conn { margin-left: auto; font-size: 12px; color: var(--mut); }
+
+  #app-controls { padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; gap: 10px; }
+  .banner.error { background: rgba(248, 81, 73, 0.15); border: 1px solid var(--bad); color: var(--bad); padding: 8px 12px; border-radius: 6px; font-size: 13px; white-space: pre-line; }
+  .summary-panel { background: rgba(88, 166, 255, 0.08); border: 1px solid var(--acc); padding: 8px 12px; border-radius: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .summary-line { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .summary-line .warn-text { color: var(--warn); font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .field-sm { width: 80px; }
+  .field label { font-size: 12px; color: var(--mut); display: flex; align-items: center; gap: 6px; }
+  .device-list { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 4px 0; max-height: 80px; overflow-y: auto; }
+  .device-item { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; user-select: none; }
+  .device-item input { margin: 0; cursor: pointer; }
+  .device-item.offline { color: var(--mut); opacity: 0.7; }
+  input[type="text"], input[type="number"], input:not([type]) {
+    background: var(--bg); border: 1px solid var(--line); color: var(--fg);
+    border-radius: 6px; padding: 6px 8px; font-size: 13px; outline: none;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, input:not([type]):focus { border-color: var(--acc); }
+  .btn {
+    background: var(--line); border: 1px solid var(--line); color: var(--fg);
+    padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: opacity .15s, background .15s;
+  }
+  .btn:hover:not(:disabled) { opacity: 0.9; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #2ea043; }
+  .btn-danger { background: #da3633; border-color: #f85149; color: #fff; }
+  .btn-danger:hover:not(:disabled) { background: #f85149; }
+  .btn-sm { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: transparent; border: 1px solid var(--line); color: var(--mut); cursor: pointer; }
+  .btn-sm:hover { color: var(--fg); border-color: var(--fg); }
+  .actions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+  details.advanced { font-size: 12px; color: var(--mut); margin-top: 4px; }
+  details.advanced summary { cursor: pointer; user-select: none; }
+  .adv-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+  .emu-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 12px; }
+  .emu-row select { background: var(--bg); border: 1px solid var(--line); color: var(--fg); border-radius: 6px; padding: 3px 6px; font-size: 12px; }
+  .adb-info { font-size: 11px; color: var(--mut); margin-top: 2px; }
+
+  main { display: grid; gap: 12px; padding: 12px;
+         grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+          display: flex; flex-direction: column; min-width: 0; }
+  .head { display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+          border-bottom: 1px solid var(--line); }
+  .serial { font-weight: 600; }
+  .pill { font-size: 11px; padding: 1px 8px; border-radius: 999px;
+          border: 1px solid var(--line); color: var(--mut); }
+  .pill.running { color: var(--ok); border-color: var(--ok); }
+  .pill.done { color: var(--acc); border-color: var(--acc); }
+  .stats { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 12px;
+           border-bottom: 1px solid var(--line); font-size: 12px; color: var(--mut); }
+  .stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+  .stats .bad b { color: var(--bad); }
+  .body { display: flex; gap: 12px; padding: 12px; flex: 1; min-height: 0; }
+  .shot { position: relative; flex: 0 0 auto; align-self: flex-start; display: inline-block;
+          border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #000; }
+  .shot img { display: block; height: min(68vh, 640px); width: auto; }
+  .shot .empty { width: 200px; height: 360px; display: flex; align-items: center;
+                 justify-content: center; color: var(--mut); font-size: 12px; text-align: center; padding: 12px; }
+  .mark { position: absolute; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%;
+          background: rgba(248, 81, 73, .45); border: 2px solid #f85149; pointer-events: none; display: none; }
+  .mark.ping { animation: ping .8s ease-out; }
+  @keyframes ping { from { transform: scale(.3); opacity: .2; } to { transform: scale(1); opacity: 1; } }
+  ol.log { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 0; overflow-y: auto;
+           max-height: min(68vh, 640px); font-size: 12px; }
+  ol.log li { display: grid; grid-template-columns: 62px 38px 1fr; gap: 6px; padding: 2px 0;
+              border-bottom: 1px dashed var(--line); }
+  ol.log .t, ol.log .n { color: var(--mut); }
+  ol.log .x { overflow-wrap: anywhere; }
+  ol.log li.crash .x, ol.log li.anr .x, ol.log li.error .x { color: var(--bad); font-weight: 600; }
+  ol.log li.relaunch .x, ol.log li.stuck .x, ol.log li.left_app .x, ol.log li.dump_failed .x { color: var(--warn); }
+  ol.log li.permission .x, ol.log li.start .x { color: var(--acc); }
+  @media (max-width: 640px) {
+    .body { flex-direction: column; }
+    .shot img { height: auto; width: min(100%, 320px); }
+    ol.log { max-height: 320px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>SimCrawler</h1>
+  <span id="pkg" class="mono"></span>
+  <span id="countdown" class="mono" style="display: none;"></span>
+  <span id="conn">đang kết nối…</span>
+</header>
+<div id="app-controls" style="display: none;">
+  <div id="error-banner" class="banner error" style="display: none;"></div>
+  <div id="summary-panel" class="summary-panel" style="display: none;"></div>
+  <form id="ctrl-form" onsubmit="return false;">
+    <div class="row">
+      <div class="field">
+        <label>Thiết bị: <button id="btn-refresh" type="button" class="btn-sm">Dò lại</button></label>
+        <div id="device-list" class="device-list mono"></div>
+      </div>
+      <div class="field">
+        <label for="input-pkg">Package:</label>
+        <input id="input-pkg" list="pkg-list" placeholder="com.example.app" class="mono" autocomplete="off">
+        <datalist id="pkg-list"></datalist>
+      </div>
+      <div class="field field-sm">
+        <label for="input-minutes">Số phút:</label>
+        <input id="input-minutes" type="number" min="1" value="10" class="mono">
+      </div>
+      <div class="actions">
+        <button id="btn-start" type="button" class="btn btn-primary" disabled>Start</button>
+        <button id="btn-stop" type="button" class="btn btn-danger" disabled>Stop</button>
+        <button id="btn-logs" type="button" class="btn">Mở thư mục log</button>
+      </div>
+    </div>
+    <div class="emu-row">
+      <label class="device-item"><input id="chk-emu" type="checkbox"> Tự khởi động emulator</label>
+      <span id="avd-list" class="emu-row" style="display: none;"></span>
+    </div>
+    <details id="advanced" class="advanced">
+      <summary>Nâng cao</summary>
+      <div class="adv-grid">
+        <div class="field">
+          <label for="input-blacklist">Blacklist (phân cách bằng dấu phẩy):</label>
+          <input id="input-blacklist" placeholder="logout, delete, pay" class="mono">
+        </div>
+        <div class="field">
+          <label for="input-adb">Đường dẫn adb (ghi đè):</label>
+          <input id="input-adb" placeholder="/path/to/adb" class="mono">
+          <span id="adb-info" class="adb-info mono"></span>
+        </div>
+      </div>
+    </details>
+  </form>
+</div>
+<main id="main"></main>
+<script>
+(function () {
+  var STOP = { time: 'hết giờ', steps: 'đủ số bước', saturated: 'hết thứ để thử',
+               interrupted: 'đã dừng tay', device_error: 'lỗi thiết bị' };
+  var STAT = [['steps', 'bước'], ['uniqueScreens', 'màn hình'], ['crashes', 'crash'], ['anrs', 'ANR'],
+              ['relaunches', 'mở lại'], ['stuck', 'kẹt'], ['leftApp', 'ra ngoài app']];
+  var cards = [];
+
+  function h(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function build(d) {
+    var card = h('section', 'card');
+    var head = h('div', 'head');
+    var serial = h('span', 'serial mono', d.serial);
+    var pill = h('span', 'pill', '');
+    head.appendChild(serial); head.appendChild(pill);
+    var stats = h('div', 'stats');
+    var body = h('div', 'body');
+    var shot = h('div', 'shot');
+    var empty = h('div', 'empty', 'Chờ ảnh màn hình đầu tiên…');
+    var img = h('img'); img.alt = 'màn hình ' + d.serial; img.style.display = 'none';
+    var mark = h('div', 'mark');
+    shot.appendChild(empty); shot.appendChild(img); shot.appendChild(mark);
+    var log = h('ol', 'log mono');
+    body.appendChild(shot); body.appendChild(log);
+    card.appendChild(head); card.appendChild(stats); card.appendChild(body);
+    var mainEl = document.getElementById('main');
+    if (mainEl) mainEl.appendChild(card);
+    var c = { index: d.index, pill: pill, stats: stats, img: img, empty: empty, mark: mark, log: log, seq: 0, blobUrl: null };
+    cards[d.index] = c;
+    return c;
+  }
+
+  function applyStats(c, s) {
+    c.stats.textContent = '';
+    STAT.forEach(function (k) {
+      var span = h('span', (k[0] === 'crashes' || k[0] === 'anrs') && s[k[0]] > 0 ? 'bad' : '');
+      var b = h('b', '', String(s[k[0]] || 0));
+      span.appendChild(b); span.appendChild(document.createTextNode(' ' + k[1]));
+      c.stats.appendChild(span);
+    });
+  }
+
+  function addLine(c, l) {
+    var li = h('li', l.event || '');
+    li.appendChild(h('span', 't', l.t));
+    li.appendChild(h('span', 'n', '#' + l.step));
+    li.appendChild(h('span', 'x', l.text));
+    c.log.insertBefore(li, c.log.firstChild);
+    while (c.log.children.length > 200) c.log.removeChild(c.log.lastChild);
+  }
+
+  var isApp = typeof window !== 'undefined' && !!window.simcrawler;
+  var transport = {
+    isApp: isApp,
+    getState: function () {
+      if (isApp) return window.simcrawler.getState();
+      return fetch('/state').then(function (r) { return r.json(); });
+    },
+    subscribe: function (onUpdate) {
+      if (isApp) return window.simcrawler.onUpdate(onUpdate);
+      var conn = document.getElementById('conn');
+      var es = new EventSource('/events');
+      es.onopen = function () { if (conn) conn.textContent = 'trực tiếp'; };
+      es.onerror = function () { if (conn) conn.textContent = 'mất kết nối, đang thử lại…'; };
+      es.onmessage = function (ev) {
+        var u = JSON.parse(ev.data);
+        onUpdate(u);
+      };
+      return function () { es.close(); };
+    },
+    loadShot: function (card, seq, cb) {
+      if (isApp) {
+        window.simcrawler.getShot(card.index).then(function (bytes) {
+          if (!bytes) return;
+          var blob = new Blob([bytes], { type: 'image/png' });
+          var url = URL.createObjectURL(blob);
+          cb(url);
+        }).catch(function () {});
+      } else {
+        cb('/shot/' + card.index + '?v=' + seq);
+      }
+    }
+  };
+
+  function apply(c, u) {
+    c.pill.className = 'pill ' + u.status;
+    c.pill.textContent = u.status === 'running' ? 'đang chạy'
+      : u.status === 'done' ? 'xong · ' + (STOP[u.stopReason] || u.stopReason) : 'chờ';
+    applyStats(c, u.stats);
+    if (u.shotSeq && u.shotSeq !== c.seq) {
+      c.seq = u.shotSeq;
+      transport.loadShot(c, u.shotSeq, function (url) {
+        if (c.blobUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+          URL.revokeObjectURL(c.blobUrl);
+          c.blobUrl = null;
+        }
+        if (transport.isApp) c.blobUrl = url;
+        c.img.src = url;
+        c.img.style.display = 'block';
+        c.empty.style.display = 'none';
+      });
+      if (u.marker) {
+        c.mark.style.left = (u.marker.x * 100) + '%';
+        c.mark.style.top = (u.marker.y * 100) + '%';
+        c.mark.style.display = 'block';
+        c.mark.classList.remove('ping'); void c.mark.offsetWidth; c.mark.classList.add('ping');
+      } else {
+        c.mark.style.display = 'none';
+      }
+    }
+  }
+
+  function resetCards(st) {
+    var pkgEl = document.getElementById('pkg');
+    if (pkgEl) pkgEl.textContent = st.package || '';
+    var mainEl = document.getElementById('main');
+    if (mainEl) mainEl.textContent = '';
+    cards.forEach(function (c) {
+      if (c && c.blobUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+        URL.revokeObjectURL(c.blobUrl);
+        c.blobUrl = null;
+      }
+    });
+    cards = [];
+    (st.devices || []).forEach(function (d) {
+      var c = build(d);
+      (d.lines || []).forEach(function (l) { addLine(c, l); });
+      apply(c, d);
+    });
+  }
+
+  if (isApp) {
+    var appControls = document.getElementById('app-controls');
+    if (appControls) appControls.style.display = 'flex';
+    var connEl = document.getElementById('conn');
+    if (connEl) connEl.textContent = 'sẵn sàng';
+
+    var btnStart = document.getElementById('btn-start');
+    var btnStop = document.getElementById('btn-stop');
+    var btnRefresh = document.getElementById('btn-refresh');
+    var btnLogs = document.getElementById('btn-logs');
+    var inputPkg = document.getElementById('input-pkg');
+    var inputMin = document.getElementById('input-minutes');
+    var inputBl = document.getElementById('input-blacklist');
+    var inputAdb = document.getElementById('input-adb');
+    var devList = document.getElementById('device-list');
+    var pkgList = document.getElementById('pkg-list');
+    var errBanner = document.getElementById('error-banner');
+    var summaryPanel = document.getElementById('summary-panel');
+    var adbInfo = document.getElementById('adb-info');
+    var chkEmu = document.getElementById('chk-emu');
+    var avdList = document.getElementById('avd-list');
+
+    var avdNames = [];            // tên AVD của máy, lấy qua IPC
+    var avdChoice = {};           // serial -> tên AVD ('' = tự bật tay)
+    var knownEmulators = ['emulator-5554', 'emulator-5556'];
+
+    var isRunning = false;
+
+    var countdownInterval = null;
+    var countdownEl = document.getElementById('countdown');
+
+    function startCountdown(totalMinutes, targetDeadline) {
+      if (countdownInterval && typeof clearInterval !== 'undefined') {
+        clearInterval(countdownInterval);
+      }
+      countdownInterval = null;
+      if (!countdownEl) return;
+      var endAt = (typeof targetDeadline === 'number' && targetDeadline > 0)
+        ? targetDeadline
+        : (Date.now() + Math.max(1, Math.round((Number(totalMinutes) || 10) * 60)) * 1000);
+
+      function renderTime() {
+        var remaining = Math.max(0, Math.round((endAt - Date.now()) / 1000));
+        var m = Math.floor(remaining / 60);
+        var s = remaining % 60;
+        var str = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+        countdownEl.textContent = '⏱️ ' + str;
+        if (remaining <= 0) {
+          if (countdownInterval && typeof clearInterval !== 'undefined') {
+            clearInterval(countdownInterval);
+          }
+          countdownInterval = null;
+          countdownEl.textContent = '⏱️ 00:00 (hết giờ)';
+        }
+      }
+
+      renderTime();
+      countdownEl.style.display = 'inline-block';
+      if (typeof setInterval !== 'undefined') {
+        countdownInterval = setInterval(renderTime, 1000);
+      }
+    }
+
+    function stopCountdown(text) {
+      if (countdownInterval && typeof clearInterval !== 'undefined') {
+        clearInterval(countdownInterval);
+      }
+      countdownInterval = null;
+      if (countdownEl) {
+        if (text) {
+          countdownEl.textContent = text;
+        } else {
+          countdownEl.style.display = 'none';
+          countdownEl.textContent = '';
+        }
+      }
+    }
+
+    function showError(msg) {
+      if (!errBanner) return;
+      if (!msg) {
+        errBanner.style.display = 'none';
+        errBanner.textContent = '';
+      } else {
+        errBanner.textContent = msg;
+        errBanner.style.display = 'block';
+      }
+    }
+
+    function getSelectedDevices() {
+      if (!devList) return [];
+      var res = [];
+      var boxes = devList.children || [];
+      for (var i = 0; i < boxes.length; i++) {
+        var label = boxes[i];
+        var cb = label.children && label.children[0];
+        if (cb && cb.checked) {
+          res.push(cb.value);
+        }
+      }
+      return res;
+    }
+
+    // Thiết bị sẽ chạy = máy được tick + máy emulator được gán AVD (chúng có thể chưa bật nên chưa có trong danh sách).
+    function getRunDevices() {
+      var devs = getSelectedDevices();
+      if (chkEmu && chkEmu.checked) {
+        Object.keys(avdChoice).forEach(function (serial) {
+          if (avdChoice[serial] && devs.indexOf(serial) < 0) devs.push(serial);
+        });
+      }
+      return devs;
+    }
+
+    function renderAvdList() {
+      if (!avdList) return;
+      avdList.textContent = '';
+      var on = !!(chkEmu && chkEmu.checked);
+      avdList.style.display = on ? 'flex' : 'none';
+      if (!on) return;
+      knownEmulators.forEach(function (serial) {
+        var wrap = h('label', 'device-item');
+        wrap.appendChild(document.createTextNode(serial + ' →'));
+        var sel = h('select', 'mono');
+        var none = h('option', '', '(tự bật tay)');
+        none.value = '';
+        sel.appendChild(none);
+        var names = avdNames.slice();
+        if (avdChoice[serial] && names.indexOf(avdChoice[serial]) < 0) names.push(avdChoice[serial]);
+        names.forEach(function (n) {
+          var opt = h('option', '', n);
+          opt.value = n;
+          sel.appendChild(opt);
+        });
+        sel.value = avdChoice[serial] || '';
+        sel.onchange = function () {
+          avdChoice[serial] = sel.value;
+          updateStartButton();
+        };
+        wrap.appendChild(sel);
+        avdList.appendChild(wrap);
+      });
+    }
+
+    function loadAvds() {
+      if (!window.simcrawler || !window.simcrawler.listAvds) return Promise.resolve();
+      return window.simcrawler.listAvds().then(function (names) {
+        avdNames = Array.isArray(names) ? names : [];
+        renderAvdList();
+      }).catch(function () {});
+    }
+
+    function getEmulatorsPayload() {
+      if (!chkEmu || !chkEmu.checked) return undefined;
+      var avds = {};
+      Object.keys(avdChoice).forEach(function (serial) {
+        if (avdChoice[serial]) avds[serial] = avdChoice[serial];
+      });
+      return { autoStart: true, avds: avds };
+    }
+
+    function updateStartButton() {
+      if (!btnStart) return;
+      var devs = getRunDevices();
+      var pkg = inputPkg ? inputPkg.value.trim() : '';
+      btnStart.disabled = isRunning || devs.length === 0 || !pkg;
+      if (btnStop) btnStop.disabled = !isRunning;
+    }
+
+    function updatePackages() {
+      var devs = getSelectedDevices();
+      if (!devs.length || !pkgList || !window.simcrawler) return;
+      var first = devs[0];
+      window.simcrawler.listPackages(first).then(function (pkgs) {
+        if (!pkgList) return;
+        pkgList.textContent = '';
+        (pkgs || []).forEach(function (p) {
+          var opt = h('option');
+          opt.value = p;
+          pkgList.appendChild(opt);
+        });
+      }).catch(function () {});
+    }
+
+    function refreshDevices(preferred) {
+      if (!window.simcrawler) return Promise.resolve();
+      showError('');
+      return window.simcrawler.listDevices().then(function (devices) {
+        if (!devList) return;
+        devList.textContent = '';
+        var preferredSet = preferred && preferred.length ? new Set(preferred) : null;
+        (devices || []).forEach(function (dev) {
+          if (/^emulator-\d+$/.test(dev.serial) && knownEmulators.indexOf(dev.serial) < 0) knownEmulators.push(dev.serial);
+          var label = h('label', 'device-item' + (dev.state !== 'device' ? ' offline' : ''));
+          var cb = h('input');
+          cb.type = 'checkbox';
+          cb.value = dev.serial;
+          if (preferredSet) {
+            cb.checked = preferredSet.has(dev.serial);
+          } else {
+            cb.checked = dev.state === 'device';
+          }
+          cb.onchange = function () {
+            updateStartButton();
+            updatePackages();
+          };
+          label.appendChild(cb);
+          var txt = ' ' + dev.serial + (dev.model ? ' (' + dev.model + ')' : '') + (dev.state !== 'device' ? ' [' + dev.state + ']' : '');
+          label.appendChild(document.createTextNode(txt));
+          devList.appendChild(label);
+        });
+        renderAvdList();
+        updateStartButton();
+        updatePackages();
+      }).catch(function (err) {
+        showError('Lỗi dò thiết bị: ' + (err.message || String(err)));
+      });
+    }
+
+    function renderSummary(summary) {
+      if (!summaryPanel) return;
+      summaryPanel.textContent = '';
+      summaryPanel.style.display = 'block';
+      var heading = h('div', '', 'Kết quả chạy:');
+      heading.style.fontWeight = '600';
+      summaryPanel.appendChild(heading);
+      (summary.devices || []).forEach(function (s) {
+        var row = h('div', 'summary-line');
+        var reason = STOP[s.stopReason] || s.stopReason;
+        var txt = s.serial + ': ' + s.steps + ' bước · ' + s.uniqueScreens + ' màn hình · ' +
+                  s.crashes + ' crash · ' + s.anrs + ' ANR · ' + s.relaunches + ' mở lại · ' + reason;
+        row.appendChild(document.createTextNode(txt));
+        if (s.untriedElements > 0) {
+          var warn = h('span', 'warn-text', ' ⚠ Cảnh báo: còn ' + s.untriedElements + ' phần tử chưa thử');
+          row.appendChild(warn);
+        }
+        summaryPanel.appendChild(row);
+      });
+    }
+
+    if (btnStart) {
+      btnStart.onclick = function () {
+        showError('');
+        if (summaryPanel) summaryPanel.style.display = 'none';
+        var devs = getRunDevices();
+        var pkg = inputPkg ? inputPkg.value.trim() : '';
+        var mins = inputMin ? Number(inputMin.value) : 10;
+        var bl = inputBl && inputBl.value ? inputBl.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+        var adb = inputAdb ? inputAdb.value.trim() : '';
+
+        if (!devs.length) {
+          showError('Chưa chọn thiết bị nào.');
+          return;
+        }
+        if (!pkg) {
+          showError('Chưa nhập package.');
+          return;
+        }
+
+        isRunning = true;
+        updateStartButton();
+        var c = document.getElementById('conn');
+        if (c) c.textContent = 'đang khởi động…';
+
+        window.simcrawler.start({
+          package: pkg,
+          devices: devs,
+          maxMinutes: mins,
+          blacklist: bl,
+          adbPath: adb || undefined,
+          emulators: getEmulatorsPayload(),
+        }).catch(function (err) {
+          isRunning = false;
+          stopCountdown();
+          updateStartButton();
+          var conn = document.getElementById('conn');
+          if (conn) conn.textContent = 'sẵn sàng';
+          showError(err.message || String(err));
+        });
+      };
+    }
+
+    if (btnStop) {
+      btnStop.onclick = function () {
+        if (window.simcrawler) {
+          window.simcrawler.stop();
+          stopCountdown('⏱️ Đang dừng…');
+          var c = document.getElementById('conn');
+          if (c) c.textContent = 'đang dừng…';
+        }
+      };
+    }
+
+    if (btnRefresh) {
+      btnRefresh.onclick = function () {
+        refreshDevices();
+      };
+    }
+
+    if (btnLogs) {
+      btnLogs.onclick = function () {
+        if (window.simcrawler) window.simcrawler.openLogs();
+      };
+    }
+
+    if (chkEmu) {
+      chkEmu.onchange = function () {
+        renderAvdList();
+        updateStartButton();
+      };
+    }
+
+    if (window.simcrawler.onStatus) {
+      window.simcrawler.onStatus(function (msg) {
+        var c = document.getElementById('conn');
+        if (c) c.textContent = msg;
+      });
+    }
+
+    if (inputPkg) {
+      inputPkg.oninput = function () {
+        updateStartButton();
+      };
+    }
+
+    window.simcrawler.getInitial().then(function (init) {
+      var st = (init && init.settings) || {};
+      if (st.package && inputPkg) inputPkg.value = st.package;
+      if (st.maxMinutes && inputMin) inputMin.value = st.maxMinutes;
+      if (st.blacklist && inputBl) {
+        inputBl.value = Array.isArray(st.blacklist) ? st.blacklist.join(', ') : String(st.blacklist);
+      }
+      if (st.adbPath && inputAdb) inputAdb.value = st.adbPath;
+      if (st.emulators && st.emulators.avds && typeof st.emulators.avds === 'object') {
+        Object.keys(st.emulators.avds).forEach(function (serial) {
+          avdChoice[serial] = String(st.emulators.avds[serial]);
+          if (knownEmulators.indexOf(serial) < 0) knownEmulators.push(serial);
+        });
+        if (chkEmu) chkEmu.checked = st.emulators.autoStart === true;
+      }
+      if (init && init.adb && adbInfo) {
+        adbInfo.textContent = 'adb: ' + init.adb.path + ' (' + init.adb.source + ')';
+      }
+      return loadAvds().then(function () { return refreshDevices(st.devices); });
+    }).then(function () {
+      return window.simcrawler.getState();
+    }).then(function (st) {
+      if (st && st.devices && st.devices.length) {
+        resetCards(st);
+        var anyActive = st.devices.some(function (d) { return d.status === 'running' || d.status === 'waiting'; });
+        if (anyActive) {
+          isRunning = true;
+          updateStartButton();
+          var c = document.getElementById('conn');
+          if (c) c.textContent = 'đang chạy';
+          if (st.maxMinutes || st.deadline) {
+            startCountdown(st.maxMinutes, st.deadline);
+          }
+        }
+      }
+    }).catch(function () {});
+
+    transport.subscribe(function (u) {
+      var c = cards[u.index];
+      if (!c) return;
+      apply(c, u);
+      if (u.line) addLine(c, u.line);
+    });
+
+    window.simcrawler.onStarted(function (st) {
+      isRunning = true;
+      updateStartButton();
+      var c = document.getElementById('conn');
+      if (c) c.textContent = 'đang chạy';
+      showError('');
+      if (summaryPanel) summaryPanel.style.display = 'none';
+      var mins = (st && st.maxMinutes) ? st.maxMinutes : (inputMin ? Number(inputMin.value) : 10);
+      startCountdown(mins, st && st.deadline);
+      resetCards(st);
+    });
+
+    window.simcrawler.onFinished(function (res) {
+      isRunning = false;
+      updateStartButton();
+      stopCountdown();
+      var c = document.getElementById('conn');
+      if (c) c.textContent = 'đã xong';
+      if (res && res.ok && res.summary) {
+        renderSummary(res.summary);
+      } else if (res && res.error) {
+        showError(res.error);
+      }
+    });
+  } else {
+    // Chế độ web: giữ nguyên logic fetch('/state') và SSE
+    fetch('/state').then(function (r) { return r.json(); }).then(function (st) {
+      var pkgEl = document.getElementById('pkg');
+      if (pkgEl) pkgEl.textContent = st.package;
+      if (st && (st.maxMinutes || st.deadline)) {
+        startCountdown(st.maxMinutes, st.deadline);
+      }
+      st.devices.forEach(function (d) {
+        var c = build(d);
+        (d.lines || []).forEach(function (l) { addLine(c, l); });
+        apply(c, d);
+      });
+      transport.subscribe(function (u) {
+        var c = cards[u.index];
+        if (!c) return;
+        apply(c, u);
+        if (u.line) addLine(c, u.line);
+        var allDone = cards.length > 0 && cards.every(function (card) {
+          return card.pill && card.pill.className.indexOf('done') >= 0;
+        });
+        if (allDone) {
+          stopCountdown();
+        }
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

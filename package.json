@@ -1,0 +1,60 @@
+{
+  "name": "simcrawler",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.cjs",
+  "description": "Tự động khám phá một app Android trên 2 thiết bị/emulator, ghi log JSONL, có dashboard xem trực tiếp.",
+  "license": "MIT",
+  "author": "khangdev20",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "demo": "tsx src/index.ts --fake --delay 250 --minutes 3 --keep",
+    "test": "node --import tsx --test \"test/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "app:build": "node scripts/build-app.mjs",
+    "app": "npm run app:build && electron .",
+    "dist": "npm run app:build && electron-builder"
+  },
+  "build": {
+    "appId": "com.simcrawler.app",
+    "productName": "SimCrawler",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": null
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
